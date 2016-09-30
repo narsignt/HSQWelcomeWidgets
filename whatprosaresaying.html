@@ -1,0 +1,135 @@
+<div id="main" ng-app="app" ng-controller="CarouselDemoCtrl">
+    <div class="inner">
+        <!-- Boxes -->
+        <div class="thumbnails">
+            <div class="box" ng-repeat="rRow in Modal">
+                <a href="#" class="image fit"><img ng-src={{rRow.imagePath}} alt="" /></a>
+                <div class="inner">
+                    <div class="post-details">
+                        <p>{{rRow.daysDiff}}</p>
+                        <h2><a href={{rRow.disLink}}>{{rRow.disSubject}}</a></h2>
+                        <div class="post-meta">
+                            <p class="author">by <a href={{rRow.authorLink}}>{{rRow.authorName}}</a></p>
+                            <p>in <a href={{rRow.spaceLink}}>{{rRow.spaceName}}</a></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<link rel="stylesheet" type="text/css" href="/themes/conentdetail/styles/homepage.css">
+<script src= "https://ajax.googleapis.com/ajax/libs/angularjs/1.3.14/angular.js"></script>
+<script>
+    var app=angular.module('app', [ ]);
+    app.controller('CarouselDemoCtrl',['$scope','getAPIResponse', function ($scope,getAPIResponse) {
+        $scope.postUrl="/api/core/v3/contents?filter=tag(expert%20blog)&sort=latestActivityDesc";
+        //$scope.postUrl="/api/core/v3/contents?filter=type(post)&sort=latestActivityDesc";
+        //$scope.postUrl="/api/core/v3/contents?sort=latestActivityDesc";
+        $scope.myName="what pros are saying";
+        var discussionData=[];
+        getAPIResponse.forPlace($scope.postUrl, function (callback) {
+            console.log("callback");
+            console.log(callback);
+
+            var  maxBlogs=5;
+            angular.forEach(callback.list, function(value, key) {
+
+                var url = document.createElement('a');
+                url.href = value.parentPlace.html;
+                var spacePath = url.pathname;
+                var spaceNameUrl = spacePath.substring(0, spacePath.lastIndexOf('/'));
+                var reqSpaceLen = spaceNameUrl.length;
+                var imgName = spaceNameUrl.substring(reqSpaceLen, spaceNameUrl.lastIndexOf('/') + 1);
+                var imagePath = "/themes/cambia_hsq/images/" + imgName + ".png";
+                var timeDiff = calculateSince(value.published);
+                var disData = {
+                    imagePath: imagePath,
+                    daysDiff: timeDiff,
+                    disSubject: value.subject,
+                    authorName: value.author.displayName,
+                    authorLink: value.author.resources.html.ref,
+                    spaceName: value.parentPlace.name,
+                    spaceLink: value.parentPlace.html,
+                    disLink: value.resources.html.ref
+                };
+                discussionData.push(disData);
+                maxBlogs-=1;
+            });
+            $scope.Modal=discussionData;
+            console.log("blogs data");
+            console.log(discussionData);
+        });
+        function calculateSince(publishDate)
+        {
+            var tTime=new Date(publishDate);
+            var cTime=new Date();
+            var timeDiff = Math.abs(new Date(publishDate) - (new Date().getTime()));
+            var diffDays = Math.ceil(timeDiff / (1000 * 3600 * 24));
+            var sinceMin=Math.round((cTime-tTime)/60000);
+
+            if(sinceMin==1)
+            {
+                var sinceSec=Math.round((cTime-tTime)/1000);
+                if(sinceSec<60)
+                    var since='less than a minute ago';
+                else
+                    var since='1 minute ago';
+            }
+            else if(sinceMin<45)
+                var since=sinceMin+' minutes ago';
+            else if(sinceMin>44&&sinceMin<60)
+                var since='1 hour ago';
+            else if(sinceMin<1440){
+                var sinceHr=Math.round(sinceMin/60);
+                if(sinceHr==1)
+                    var since='1 hour ago';
+                else
+                    var since=+sinceHr+' hours ago';
+            }
+            else if(sinceMin>1439&&sinceMin<2879)
+                var since='1 day ago';
+            else if(sinceMin>2880&&sinceMin<10080)
+            {
+                var sinceDay=Math.round(sinceMin/1440);
+                var since=sinceDay+' days ago';
+            }
+            else if(diffDays>7&&diffDays<30)
+            {
+                var sinceWeek=Math.round(diffDays/7);
+                var since=sinceWeek+(sinceWeek>1?' weeks ago':'week ago');
+            }
+            else if(diffDays>31&&diffDays<364)
+            {
+                var sinceMonth=Math.round(diffDays/31);
+                var since=sinceMonth+(sinceMonth>1?' months ago':'month ago');
+            }
+            else
+            {
+                var sinceYear=Math.round(diffDays/365);
+                var since=sinceYear+(sinceYear>1?' years ago':'year ago');
+            }
+            return since;
+        };
+    }]);
+    app.factory('getAPIResponse',['$http',function($http){
+        var Service={};
+        Service.forPlace=function(url,callback){
+            $http({
+                method:'GET',
+                url:url,
+                data:{},
+                transformResponse:function(data,headersGetter,status){
+                    return {data:data}
+                }
+            }).success(function (result) {
+                var content=JSON.parse(result.data.replace(/^throw [^;]*;/, ''));
+                callback(content);
+                content="";
+            }).error(function (error) {
+                console.log(error);
+            });
+        }
+        return Service;
+    }]);
+</script>

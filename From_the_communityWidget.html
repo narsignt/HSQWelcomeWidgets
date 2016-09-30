@@ -1,0 +1,106 @@
+
+<div id="main" ng-app="app" ng-controller="CarouselDemoCtrl">
+    <div style="text-align:center;margin-bottom:30px">
+        <h1 style="font-size: 30px;font-weight: bold;margin-bottom: 0;">From the community</h1>
+        <p>Popular topics, stories and news</p>
+    </div>
+    <div class="inner">
+        <!-- Boxes -->
+        <div class="thumbnails">
+            <div class="box" ng-repeat="rRow in recentcontentData">
+                <a href="#" class="image fit"><img ng-src={{rRow.imagePath}} alt="" /></a>
+                <div class="inner">
+                    <div class="post-details">
+                        <p>{{rRow.daysDiff}}</p>
+                        <h2><a href={{rRow.disLink}}>{{rRow.disSubject}}</a></h2>
+                        <div class="post-meta">
+                            <p class="author">by <a href={{rRow.authorLink}}>{{rRow.authorName}}</a></p>
+                            <p>in <a href={{rRow.spaceLink}}>{{rRow.spaceName}}</a href={{rRow.spaceLink}}></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script src= "https://ajax.googleapis.com/ajax/libs/angularjs/1.3.14/angular.js"></script>
+<script>
+    var app=angular.module('app', [ ]);
+    app.controller('CarouselDemoCtrl',['$scope','getAPIResponse', function ($scope,getAPIResponse) {
+        $scope.postUrl="/api/core/v3/contents?filter=type(discussion,poll)&sort=latestActivityDesc";
+        $scope.myName="recent Content Widget";
+        getAPIResponse.forPlace($scope.postUrl, function (callback) {
+            console.log("callback");
+            console.log(callback);
+            var discussionData=[];
+            var  maxDiscs=5;
+            angular.forEach(callback.list, function(value, key) {
+                if(maxDiscs>=1) {
+                    var spacePathName = document.createElement('a');
+                    spacePathName.href = value.parentPlace.html;
+                    var spacePath = spacePathName.pathname;
+                    var n = spacePath.lastIndexOf("/") + 1;
+                    var strlen = spacePath.length;
+                    var imageName = spacePath.substring(n, strlen);
+                    var publishDate = value.published;
+                    var date1 = new Date(publishDate);
+                    var date2 = new Date();
+                    var timeDiff = Math.abs(date2.getTime() - date1.getTime());
+                    var diffDays = Math.ceil(timeDiff / (1000 * 3600 * 24));
+                    var days = '';
+                    if (diffDays < 7) {
+                        days = diffDays + " days ago";
+                    }
+                    else {
+                        //alert(Math.round(diffDays/7)+"weeks ago");
+                        days = Math.round(diffDays / 7) + " weeks ago";
+                    }
+                    var imagePath = "/themes/cambia_hsq/images/" + imageName + ".png";
+//                 console.log("imagePathName "+imagePath);
+//                 console.log("date published diff "+days);
+//                 console.log("doc subject"+value.subject);
+//                 console.log("author "+value.author.displayName);
+//                 console.log("space name "+value.parentPlace.name);
+//                 console.log("discussion link "+value.resources.html.ref);
+//                 console.log('\n');
+                    var disData = {
+                        imagePath: imagePath,
+                        daysDiff: days,
+                        disSubject: value.subject,
+                        authorName: value.author.displayName,
+                        authorLink: value.author.resources.html.ref,
+                        spaceName: value.parentPlace.name,
+                        spaceLink: value.parentPlace.html,
+                        disLink: value.resources.html.ref
+                    };
+                    discussionData.push(disData);
+                    maxDiscs-=1;
+                }
+            });
+            console.log("recent data");
+            console.log(discussionData);
+            $scope.recentcontentData=discussionData;
+        });
+    }]);
+    app.factory('getAPIResponse',['$http',function($http){
+        var Service={};
+        Service.forPlace=function(url,callback){
+            $http({
+                method:'GET',
+                url:url,
+                data:{},
+                transformResponse:function(data,headersGetter,status){
+                    return {data:data}
+                }
+            }).success(function (result) {
+                var content=JSON.parse(result.data.replace(/^throw [^;]*;/, ''));
+                callback(content);
+                content="";
+            }).error(function (error) {
+                console.log(error);
+            });
+        }
+        return Service;
+    }]);
+</script>
+
